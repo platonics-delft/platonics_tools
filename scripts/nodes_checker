@@ -1,0 +1,62 @@
+#!/usr/bin/env python3
+
+import sys
+import subprocess
+from pprint import pprint
+import rospy 
+import rospkg
+from std_msgs.msg import Bool, String
+
+create_list = False
+if len(sys.argv) > 1 and sys.argv[1] == 'create':
+    create_list = True
+
+class NodeChecker():
+    def __init__(self):
+        rospy.init_node("node_checker")
+        self._rate = rospy.Rate(5)
+        self.node_check_pub = rospy.Publisher('all_nodes_active', Bool, queue_size=1) 
+        self.debug_pub = rospy.Publisher('debug_topic', String, queue_size=1)
+        rospack = rospkg.RosPack()
+        self._expected_nodes_files = rospack.get_path('platonics_tools') + '/config/'
+        self._expected_node_file = self._expected_nodes_files + 'expected_node.txt'
+
+    def run(self):
+        while rospy.is_shutdown() == False:
+            p = subprocess.Popen(['rosnode', 'list'], shell=False, stdout=subprocess.PIPE).stdout
+            raw_lines = p.readlines()
+            raw_lines = [line.decode('UTF-8') for line in raw_lines]
+            lines = []
+            for line in raw_lines:
+                while line[-2].isdigit():
+                    line = line.split('_')[0]
+                    line = line + '\n'
+                lines.append(line)
+
+            if create_list:
+                rospy.loginfo("Creating expected node list")
+                with open (self._expected_node_file, 'w') as f:
+                    for line in lines:
+                        f.write(line)
+                break
+            else:
+                dead_nodes = []
+                with open (self._expected_node_file, 'r') as f:
+                    expected_lines = f.readlines()
+                for line in expected_lines:
+                    if line not in lines:
+                        dead_nodes.append(line[:-1])
+                if len(dead_nodes) < 1:
+                    print("All nodes are active.")
+                    self.node_check_pub.publish(True)
+                else:
+                    print("Some nodes died")
+                    self.node_check_pub.publish(False)
+                    self.debug_pub.publish(f"Some nodes are dead : {str(dead_nodes)}")
+                    pprint(dead_nodes)
+            self._rate.sleep()
+
+
+if __name__ == "__main__":
+    s = NodeChecker()
+    s.run()
