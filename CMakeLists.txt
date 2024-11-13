@@ -7,7 +7,28 @@ project(platonics_tools)
 ## Find catkin macros and libraries
 ## if COMPONENTS list like find_package(catkin REQUIRED COMPONENTS xyz)
 ## is used, also find other catkin packages
-find_package(catkin REQUIRED)
+find_package(catkin REQUIRED COMPONENTS
+  roscpp
+  image_transport
+  cv_bridge
+  sensor_msgs
+  std_msgs
+  rosbridge_server
+)
+
+## OpenCV dependencies
+find_package(OpenCV REQUIRED)
+
+## Declare a catkin package
+catkin_package(
+  CATKIN_DEPENDS roscpp image_transport cv_bridge sensor_msgs std_msgs
+)
+
+## Specify additional locations of header files
+include_directories(
+  ${catkin_INCLUDE_DIRS}
+  ${OpenCV_INCLUDE_DIRS}
+)
 
 ## System dependencies are found with CMake's conventions
 # find_package(Boost REQUIRED COMPONENTS system)
@@ -129,7 +150,8 @@ include_directories(
 ## Declare a C++ executable
 ## With catkin_make all packages are built within a single CMake context
 ## The recommended prefix ensures that target names across packages don't collide
-# add_executable(${PROJECT_NAME}_node src/platonics_tools_node.cpp)
+add_executable(${PROJECT_NAME}_compressed_img_publisher src/publish_compressed_image.cpp)
+add_executable(${PROJECT_NAME}_simple_publisher src/old.cpp)
 
 ## Rename C++ executable without prefix
 ## The above recommended prefix causes long target names, the following renames the
@@ -200,3 +222,29 @@ include_directories(
 
 ## Add folders to be run by python nosetests
 # catkin_add_nosetests(test)
+
+
+## Link the executable to the dependencies
+target_link_libraries(
+  ${PROJECT_NAME}_compressed_img_publisher
+  ${catkin_LIBRARIES}
+  ${OpenCV_LIBRARIES}
+)
+
+target_link_libraries(
+  ${PROJECT_NAME}_simple_publisher
+  ${catkin_LIBRARIES}
+  ${OpenCV_LIBRARIES}
+)
+
+## Install targets
+install(TARGETS 
+  ${PROJECT_NAME}_compressed_img_publisher
+  RUNTIME DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
+)
+
+install(TARGETS 
+  ${PROJECT_NAME}_simple_publisher
+  RUNTIME DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
+)
+
